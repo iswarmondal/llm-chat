@@ -1,0 +1,17 @@
+---
+description: This rule gives an overview about the business logic and also gives an overview about the UI design philosophy of the overall project.
+globs: *.tsx, *.ts, *.js
+alwaysApply: false
+---
+# business-logic
+
+- This is a wrapper of various LLM providers. We provide a unified interface for chatting with multiple LLMs.
+- We also provide a way to pay-as-you-go for the LLMs, with a focus on low-cost usage. The user can pay up-front for tokens and consume those tokens as they chat with the provided LLMs.
+- The focus is to provide a fast and easy to use interface for chatting with LLMs, with a focus on low-cost usage.
+
+# Design philosophy
+
+- The frontend is implemented in the `client` folder. This is a next.js app.
+- The app is designed with a simple and minimalistic neo-brutalist design.
+- I have implemented some components like the container, heading text, button, etc. in the brutal-components folder.
+- I have also implemented some utils like the ProtectedRoute. This ensures that the user is authenticated before they can access the wrapped pages.
