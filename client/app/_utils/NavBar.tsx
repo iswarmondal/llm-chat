@@ -3,12 +3,14 @@
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase/init";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import classNames from "classnames";
+import { Button } from "@/app/_brutalComponents/";
 
 const NavBar = () => {
   const [user] = useAuthState(auth);
   const pathname = usePathname();
+  const router = useRouter();
 
   const NavLink = ({
     href,
@@ -21,15 +23,10 @@ const NavBar = () => {
     return (
       <Link
         href={href}
-        className={classNames(
-          "border-4 border-black px-4 py-2 font-bold transition-all",
-          {
-            "bg-black text-white shadow-[4px_4px_0_0_#333] active:translate-y-1 active:shadow-none":
-              isActive,
-            "bg-white text-black shadow-[4px_4px_0_0_#000] hover:bg-gray-100 active:translate-y-1 active:shadow-none":
-              !isActive,
-          }
-        )}
+        className={classNames("px-4 font-bold transition-all", {
+          "text-3xl": isActive,
+          "hover:text-xl active:translate-y-1 active:shadow-none": !isActive,
+        })}
       >
         {children}
       </Link>
@@ -48,12 +45,16 @@ const NavBar = () => {
           {user ? (
             <>
               <NavLink href="/profile">Profile</NavLink>
-              <button
-                onClick={() => auth.signOut()}
-                className="border-4 border-black px-4 py-2 font-bold bg-white text-black shadow-[4px_4px_0_0_#000] hover:bg-gray-100 active:translate-y-1 active:shadow-none transition-all"
-              >
-                Logout
-              </button>
+              <NavLink href="/chat">Chat</NavLink>
+              <Button
+                onClick={async () => {
+                  await auth.signOut();
+                  router.push("/login");
+                }}
+                buttonType="primary"
+                size="lg"
+                buttonText="Logout"
+              />
             </>
           ) : (
             <NavLink href="/login">Login</NavLink>
