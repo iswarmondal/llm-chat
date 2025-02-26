@@ -11,7 +11,7 @@ const Profile = () => {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen flex flex-col justify-center items-center">
+      <div className="min-h-[80vh] flex flex-col justify-center items-center">
         <Container className="w-[90%] md:w-[80%] lg:w-[70%] xl:w-[60%] m-4 p-4 bg-yellow-300 flex flex-col gap-4">
           <HeadingText>Profile</HeadingText>
           <div>

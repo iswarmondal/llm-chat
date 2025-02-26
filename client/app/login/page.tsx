@@ -13,7 +13,7 @@ export default function Page() {
 
   useEffect(() => {
     if (user) {
-      router.push("/");
+      router.push("/profile");
     }
   });
 
@@ -29,20 +29,20 @@ export default function Page() {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center h-screen">
+    <div className="flex flex-col justify-center items-center h-[80vh]">
       <Container
         bgColor="yellow"
         shadowSize="lg"
-        className="p-4 m-4 min-h-[40vh] w-[70vw] sm:w-[90vw] md:w-[60vw] lg:w-[40vw] flex flex-col justify-evenly items-center gap-4"
+        className="p-4 m-4 min-h-[40vh] w-[80vw] sm:w-[90vw] md:w-[60vw] lg:w-[40vw] flex flex-col justify-evenly items-center gap-4"
       >
-        <HeadingText level={1} color="black">
+        <HeadingText level={2} color="black">
           Login or Signup
         </HeadingText>
 
         <Button
           buttonText="Continue with Google"
           buttonType="secondary"
-          size="xl"
+          size="full"
           onClick={handleLogin}
         />
       </Container>

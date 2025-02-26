@@ -27,10 +27,10 @@ const Button = ({
         },
         {
           "w-full": size === "full",
-          "w-1/2": size === "xl",
-          "w-1/3": size === "lg",
-          "w-1/4": size === "md",
-          "w-1/5": size === "sm",
+          "w-64 md:w-1/2": size === "xl",
+          "w-52 md:w-1/3": size === "lg",
+          "w-40 md:w-1/4": size === "md",
+          "w-32 md:w-1/5": size === "sm",
         },
         {
           "opacity-50": disabled,
