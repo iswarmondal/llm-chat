@@ -1,5 +1,9 @@
+"use client";
+
 import ProtectedRoute from "@/app/_utils/ProtectedRoute";
 import { HeadingText, Container, ProgressBar } from "@/app/_brutalComponents";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "@/lib/firebase/init";
 
 const Profile = () => {
   const totalTokens = 1000;
@@ -7,7 +11,9 @@ const Profile = () => {
   const remainingTokens = totalTokens - usedTokens;
   const usagePercentage = (usedTokens / totalTokens) * 100;
 
-  const userEmail = "user@example.com";
+  const [user] = useAuthState(auth);
+
+  const userEmail = user?.email || "No email found";
 
   return (
     <ProtectedRoute>

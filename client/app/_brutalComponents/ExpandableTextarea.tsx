@@ -82,8 +82,8 @@ const ExpandableTextarea = ({
       placeholder={placeholder}
       rows={minRows}
       className={classNames(
-        "min-h-16 border-4 border-black px-3 font-medium transition-all resize-none overflow-auto",
-        "focus:outline-none shadow-[4px_4px_0_0_#000] focus:shadow-none active:shadow-none",
+        "min-h-16 max-h-full border-4 border-black px-3 font-medium transition-all resize-none overflow-auto",
+        "focus:outline-none focus:shadow-none active:shadow-none",
         "placeholder:text-gray-500",
         {
           "w-full": size === "full",

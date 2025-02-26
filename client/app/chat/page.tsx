@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   Container,
@@ -8,146 +8,92 @@ import {
   ExpandableTextarea,
 } from "@/app/_brutalComponents";
 import classNames from "classnames";
-
-// Mock data types
-type Message = {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  timestamp: Date;
-};
-
-type ChatThread = {
-  id: string;
-  title: string;
-  messages: Message[];
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-// Mock data
-const mockChatThreads: ChatThread[] = [
-  {
-    id: "1",
-    title: "How to build a website",
-    messages: [
-      {
-        id: "m1",
-        content: "How do I build a website from scratch?",
-        role: "user",
-        timestamp: new Date("2023-05-15T10:30:00"),
-      },
-      {
-        id: "m2",
-        content:
-          "Building a website from scratch involves several steps. First, you'll need to decide on the technologies you want to use. For a simple website, you might start with HTML, CSS, and JavaScript. For more complex applications, you might consider frameworks like React, Vue, or Angular for the frontend, and Node.js, Django, or Ruby on Rails for the backend...",
-        role: "assistant",
-        timestamp: new Date("2023-05-15T10:31:00"),
-      },
-    ],
-    createdAt: new Date("2023-05-15T10:30:00"),
-    updatedAt: new Date("2023-05-15T10:31:00"),
-  },
-  {
-    id: "2",
-    title: "Learning JavaScript basics",
-    messages: [
-      {
-        id: "m3",
-        content: "What are the basics of JavaScript I should learn?",
-        role: "user",
-        timestamp: new Date("2023-05-16T14:20:00"),
-      },
-      {
-        id: "m4",
-        content:
-          "JavaScript basics include understanding variables, data types, functions, control flow (if/else statements, loops), and DOM manipulation. Start by learning how to declare variables with let and const, work with strings, numbers, and arrays, and write simple functions...",
-        role: "assistant",
-        timestamp: new Date("2023-05-16T14:21:00"),
-      },
-    ],
-    createdAt: new Date("2023-05-16T14:20:00"),
-    updatedAt: new Date("2023-05-16T14:21:00"),
-  },
-  {
-    id: "3",
-    title: "React vs Vue comparison",
-    messages: [
-      {
-        id: "m5",
-        content: "What are the main differences between React and Vue?",
-        role: "user",
-        timestamp: new Date("2023-05-17T09:15:00"),
-      },
-      {
-        id: "m6",
-        content:
-          "React and Vue are both popular JavaScript frameworks for building user interfaces, but they have some key differences. React uses JSX and a more JavaScript-centric approach, while Vue uses templates that are closer to HTML. Vue has a gentler learning curve and more built-in features, while React is more minimal and flexible...",
-        role: "assistant",
-        timestamp: new Date("2023-05-17T09:16:00"),
-      },
-    ],
-    createdAt: new Date("2023-05-17T09:15:00"),
-    updatedAt: new Date("2023-05-17T09:16:00"),
-  },
-];
+import localDB from "@/lib/dexie/init";
+import { type DX_Thread, type DX_Message } from "@/lib/dexie/init";
 
 const ChatPage = () => {
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
-    mockChatThreads[0]?.id || null
-  );
-  const [message, setMessage] = useState("");
-  const [threads, setThreads] = useState<ChatThread[]>(mockChatThreads);
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [typedMessage, setTypedMessage] = useState("");
+  const [currentThreadMessages, setCurrentThreadMessages] = useState<
+    DX_Message[]
+  >([]);
+  const [threads, setThreads] = useState<DX_Thread[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const selectedThread =
     threads.find((thread) => thread.id === selectedThreadId) || null;
 
-  const handleSendMessage = (content: string) => {
-    if (!selectedThreadId || !content.trim()) return;
+  const handleSendMessage = async (content: string) => {
+    try {
+      if (!selectedThreadId || !content.trim()) return;
 
-    const newMessage: Message = {
-      id: `m${Date.now()}`,
-      content,
-      role: "user",
-      timestamp: new Date(),
-    };
+      const newMessage: DX_Message = {
+        id: crypto.randomUUID(),
+        content,
+        role: "user",
+        createdAt: new Date(),
+        threadId: selectedThreadId,
+      };
 
-    // Mock assistant response
-    const assistantResponse: Message = {
-      id: `m${Date.now() + 1}`,
-      content:
-        "This is a mock response from the assistant. In a real application, this would be the response from the LLM API.",
-      role: "assistant",
-      timestamp: new Date(),
-    };
+      // Mock assistant response
+      const assistantResponse: DX_Message = {
+        id: crypto.randomUUID(),
+        content:
+          "This is a mock response from the assistant. In a real application, this would be the response from the LLM API.",
+        role: "assistant",
+        createdAt: new Date(),
+        threadId: selectedThreadId,
+      };
 
-    setThreads((prevThreads) =>
-      prevThreads.map((thread) =>
-        thread.id === selectedThreadId
-          ? {
-              ...thread,
-              messages: [...thread.messages, newMessage, assistantResponse],
-              updatedAt: new Date(),
-            }
-          : thread
-      )
-    );
+      await localDB.addMessage(newMessage, selectedThreadId);
+      await localDB.addMessage(assistantResponse, selectedThreadId);
 
-    setMessage("");
+      if (selectedThread?.title === "New Chat") {
+        await localDB.updateThreadTitle(selectedThreadId, content.slice(0, 20));
+      }
+      setCurrentThreadMessages((prevMessages) => [
+        ...prevMessages,
+        newMessage,
+        assistantResponse,
+      ]);
+
+      setThreads((prevThreads) =>
+        prevThreads.map((thread) =>
+          thread.id === selectedThreadId
+            ? {
+                ...thread,
+                lastMessageId: assistantResponse.id,
+                title: content.slice(0, 20),
+                updatedAt: new Date(),
+              }
+            : thread
+        )
+      );
+
+      setTypedMessage("");
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const createNewChat = () => {
-    const newThread: ChatThread = {
-      id: `thread-${Date.now()}`,
-      title: "New conversation",
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  const createNewChat = async () => {
+    try {
+      const newThread: DX_Thread = {
+        id: crypto.randomUUID(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        lastMessageId: "",
+        title: "New Chat",
+      };
 
-    setThreads((prevThreads) => [newThread, ...prevThreads]);
-    setSelectedThreadId(newThread.id);
+      await localDB.addThread(newThread);
+
+      setThreads((prevThreads) => [newThread, ...prevThreads]);
+      setSelectedThreadId(newThread.id);
+      setCurrentThreadMessages([]);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const formatDate = (date: Date) => {
@@ -157,8 +103,22 @@ const ChatPage = () => {
     }).format(date);
   };
 
+  const reloadThreadsAndMessages = async () => {
+    const threads = await localDB.getRecentThreads();
+    setThreads(threads);
+    if (threads.length > 0) {
+      setSelectedThreadId(threads[0].id);
+      const messages = await localDB.getMessages(threads[0].id);
+      setCurrentThreadMessages(messages);
+    }
+  };
+
+  useEffect(() => {
+    reloadThreadsAndMessages();
+  }, []);
+
   return (
-    <div className="flex h-screen bg-gray-100 relative">
+    <div className="flex h-screen bg-gray-200 relative">
       {/* Sidebar Toggle Button */}
       <Button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -207,7 +167,9 @@ const ChatPage = () => {
               )}
               onClick={() => setSelectedThreadId(thread.id)}
             >
-              <div className="font-bold truncate">{thread.title}</div>
+              <div className="font-bold truncate">
+                {thread.title ?? "New Chat"}
+              </div>
               <div className="text-sm ">{formatDate(thread.updatedAt)}</div>
             </div>
           ))}
@@ -224,7 +186,7 @@ const ChatPage = () => {
           }
         )}
       >
-        <div>
+        <div className="flex flex-col flex-1">
           {selectedThread ? (
             <>
               {/* Chat Header */}
@@ -233,8 +195,8 @@ const ChatPage = () => {
               </Container> */}
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {selectedThread.messages.map((message) => (
+              <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                {currentThreadMessages.map((message) => (
                   <div
                     key={message.id}
                     className={classNames("max-w-3xl", {
@@ -242,7 +204,7 @@ const ChatPage = () => {
                     })}
                   >
                     <Container
-                      bgColor={message.role === "user" ? "yellow" : "white"}
+                      bgColor={message.role === "user" ? "green" : "white"}
                       shadowSize="none"
                       className="p-3"
                     >
@@ -256,24 +218,28 @@ const ChatPage = () => {
               </div>
 
               {/* Input Area */}
-              <div className="p-1 fixed bottom-0 left-0 right-0">
+              <div
+                className={classNames("p-1 fixed bottom-0 left-0 right-0", {
+                  "left-[260px]": isSidebarOpen,
+                })}
+              >
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <ExpandableTextarea
-                      value={message}
-                      onChange={setMessage}
+                      value={typedMessage}
+                      onChange={setTypedMessage}
                       onSubmit={handleSendMessage}
                       placeholder="Type your message here..."
                       minRows={1}
-                      maxRows={5}
-                      className="h-full"
+                      maxRows={6}
+                      size="full"
                     />
                   </div>
                   <Button
                     buttonText="Send"
                     buttonType="primary"
-                    onClick={() => handleSendMessage(message)}
-                    disabled={!message.trim()}
+                    onClick={() => handleSendMessage(typedMessage)}
+                    disabled={!typedMessage.trim()}
                   />
                 </div>
               </div>
