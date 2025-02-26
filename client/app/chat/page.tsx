@@ -31,7 +31,7 @@ const ChatPage = () => {
         id: crypto.randomUUID(),
         content,
         role: "user",
-        createdAt: new Date(),
+        createdAt: new Date().getMilliseconds(),
         threadId: selectedThreadId,
       };
 
@@ -41,7 +41,7 @@ const ChatPage = () => {
         content:
           "This is a mock response from the assistant. In a real application, this would be the response from the LLM API.",
         role: "assistant",
-        createdAt: new Date(),
+        createdAt: new Date().getMilliseconds(),
         threadId: selectedThreadId,
       };
 
@@ -116,6 +116,19 @@ const ChatPage = () => {
   useEffect(() => {
     reloadThreadsAndMessages();
   }, []);
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        if (!selectedThreadId) return;
+        const messages = await localDB.getMessages(selectedThreadId);
+        setCurrentThreadMessages(messages);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchMessages();
+  }, [selectedThreadId]);
 
   return (
     <div className="flex h-screen bg-gray-200 relative">

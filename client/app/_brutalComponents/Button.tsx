@@ -20,7 +20,7 @@ const Button = ({
   return (
     <button
       className={classNames(
-        "border-4 border-black py-2 font-bold active:translate-y-3 active:shadow-none hover:shadow-[3px_3px_0_0_#333] transition-all",
+        "border-4 border-black py-2 font-bold active:translate-y-1 active:shadow-none hover:shadow-[3px_3px_0_0_#333] transition-all",
         {
           "bg-white text-black shadow-[4px_4px_0_0_#000]":
             buttonType === "secondary",

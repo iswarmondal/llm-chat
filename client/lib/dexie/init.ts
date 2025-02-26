@@ -5,7 +5,7 @@ export interface DX_Message {
   threadId: string;
   content: string;
   role: "user" | "assistant";
-  createdAt: Date;
+  createdAt: number;
 }
 
 export interface DX_Thread {
