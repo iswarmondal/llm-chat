@@ -1,7 +1,7 @@
 import { Dexie, type Table } from "dexie";
 
 export interface DX_Message {
-  id: string;
+  id?: string;
   threadId: string;
   content: string;
   role: "user" | "assistant";
@@ -56,10 +56,7 @@ class LocalDB extends Dexie {
   }
 
   async getMessages(threadId: string) {
-    return await this.messages
-      .where("threadId")
-      .equals(threadId)
-      .sortBy("createdAt");
+    return await this.messages.where("threadId").equals(threadId).sortBy("id");
   }
 }
 

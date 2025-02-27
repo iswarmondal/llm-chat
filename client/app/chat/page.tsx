@@ -10,71 +10,71 @@ import {
 import classNames from "classnames";
 import localDB from "@/lib/dexie/init";
 import { type DX_Thread, type DX_Message } from "@/lib/dexie/init";
+import { Message, useChat } from "@ai-sdk/react";
+import { auth } from "@/lib/firebase/init";
 
 const ChatPage = () => {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
-  const [typedMessage, setTypedMessage] = useState("");
-  const [currentThreadMessages, setCurrentThreadMessages] = useState<
-    DX_Message[]
-  >([]);
   const [threads, setThreads] = useState<DX_Thread[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [userAuthToken, setUserAuthToken] = useState<string | null>(null);
 
   const selectedThread =
     threads.find((thread) => thread.id === selectedThreadId) || null;
 
-  const handleSendMessage = async (content: string) => {
-    try {
-      if (!selectedThreadId || !content.trim()) return;
+  const {
+    messages,
+    input,
+    setInput,
+    append,
+    status,
+    setMessages,
+  } = useChat({
+    headers: {
+      Authorization: `Bearer ${userAuthToken}`,
+    },
+    onFinish: async (message: Message) => {
+      // Save messages to local DB when the stream is finished
+      if (!selectedThreadId) return;
 
-      const newMessage: DX_Message = {
-        id: crypto.randomUUID(),
-        content,
+      const userMessage: DX_Message = {
+        content: input.trim(),
         role: "user",
         createdAt: new Date().getMilliseconds(),
         threadId: selectedThreadId,
       };
 
-      // Mock assistant response
-      const assistantResponse: DX_Message = {
-        id: crypto.randomUUID(),
-        content:
-          "This is a mock response from the assistant. In a real application, this would be the response from the LLM API.",
+      const assistantMessage: DX_Message = {
+        content: message.content,
         role: "assistant",
         createdAt: new Date().getMilliseconds(),
         threadId: selectedThreadId,
       };
 
-      await localDB.addMessage(newMessage, selectedThreadId);
-      await localDB.addMessage(assistantResponse, selectedThreadId);
+      await localDB.addMessage(userMessage, selectedThreadId);
+      await localDB.addMessage(assistantMessage, selectedThreadId);
 
       if (selectedThread?.title === "New Chat") {
-        await localDB.updateThreadTitle(selectedThreadId, content.slice(0, 20));
+        await localDB.updateThreadTitle(
+          selectedThreadId,
+          userMessage.content.slice(0, 20)
+        );
       }
-      setCurrentThreadMessages((prevMessages) => [
-        ...prevMessages,
-        newMessage,
-        assistantResponse,
-      ]);
 
       setThreads((prevThreads) =>
         prevThreads.map((thread) =>
           thread.id === selectedThreadId
             ? {
                 ...thread,
-                lastMessageId: assistantResponse.id,
-                title: content.slice(0, 20),
+                lastMessageId: assistantMessage.id ?? "",
+                title: userMessage.content.slice(0, 20),
                 updatedAt: new Date(),
               }
             : thread
         )
       );
-
-      setTypedMessage("");
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    },
+  });
 
   const createNewChat = async () => {
     try {
@@ -90,7 +90,7 @@ const ChatPage = () => {
 
       setThreads((prevThreads) => [newThread, ...prevThreads]);
       setSelectedThreadId(newThread.id);
-      setCurrentThreadMessages([]);
+      setMessages([]);
     } catch (error) {
       console.error(error);
     }
@@ -108,27 +108,29 @@ const ChatPage = () => {
     setThreads(threads);
     if (threads.length > 0) {
       setSelectedThreadId(threads[0].id);
-      const messages = await localDB.getMessages(threads[0].id);
-      setCurrentThreadMessages(messages);
+      const localMessages = await localDB.getMessages(threads[0].id);
+
+      // Convert local messages to messages format
+      const messages = localMessages.map((message) => ({
+        id: message.id ?? crypto.randomUUID(), // Ensure id is always present
+        content: message.content,
+        role: message.role,
+        createdAt: new Date(message.createdAt),
+      }));
+      setMessages(messages);
     }
   };
 
   useEffect(() => {
-    reloadThreadsAndMessages();
-  }, []);
-
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        if (!selectedThreadId) return;
-        const messages = await localDB.getMessages(selectedThreadId);
-        setCurrentThreadMessages(messages);
-      } catch (error) {
-        console.error(error);
+    const fetchUserAuthToken = async () => {
+      const token = await auth.currentUser?.getIdToken();
+      if (token) {
+        setUserAuthToken(token);
       }
     };
-    fetchMessages();
-  }, [selectedThreadId]);
+    fetchUserAuthToken();
+    reloadThreadsAndMessages();
+  });
 
   return (
     <div className="flex h-screen bg-gray-200 relative">
@@ -209,21 +211,20 @@ const ChatPage = () => {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                {currentThreadMessages.map((message) => (
+                {messages.map((message, index) => (
                   <div
-                    key={message.id}
-                    className={classNames("max-w-3xl", {
-                      "ml-auto": message.role === "user",
-                    })}
+                    key={index}
+                    className={classNames(
+                      "max-w-3xl",
+                      {"ml-auto": message.role === "user"}
+                    )}
                   >
                     <Container
                       bgColor={message.role === "user" ? "green" : "white"}
                       shadowSize="none"
                       className="p-3"
                     >
-                      <div className="font-bold mb-1">
-                        {message.role === "user" ? "You" : "Assistant"}
-                      </div>
+                      <div className="font-bold mb-1">{message.role}</div>
                       <div>{message.content}</div>
                     </Container>
                   </div>
@@ -236,12 +237,18 @@ const ChatPage = () => {
                   "left-[260px]": isSidebarOpen,
                 })}
               >
-                <div className="flex gap-2">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    append({ content: input, role: "user" });
+                    setInput("");
+                  }}
+                  className="flex gap-2"
+                >
                   <div className="flex-1">
                     <ExpandableTextarea
-                      value={typedMessage}
-                      onChange={setTypedMessage}
-                      onSubmit={handleSendMessage}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
                       placeholder="Type your message here..."
                       minRows={1}
                       maxRows={6}
@@ -249,12 +256,23 @@ const ChatPage = () => {
                     />
                   </div>
                   <Button
-                    buttonText="Send"
+                    buttonText={
+                      status === "streaming" || status === "submitted"
+                        ? "Sending..."
+                        : "Send"
+                    }
                     buttonType="primary"
-                    onClick={() => handleSendMessage(typedMessage)}
-                    disabled={!typedMessage.trim()}
+                    onClick={() => {
+                      append({ content: input, role: "user" });
+                      setInput("");
+                    }}
+                    disabled={
+                      !input.trim() ||
+                      status === "streaming" ||
+                      status === "submitted"
+                    }
                   />
-                </div>
+                </form>
               </div>
             </>
           ) : (

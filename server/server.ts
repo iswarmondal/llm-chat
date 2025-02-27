@@ -1,9 +1,18 @@
 import express, { type Request, type Response } from "express";
+import cors from "cors";
 import admin from "firebase-admin";
 import { verifyFirebaseAuth } from "./middlewares/auth";
 import { handleLLMRequest, handleLLMRequestStream } from "./services/AISdk";
+import { google } from "@ai-sdk/google";
+import { streamText, type UIMessage } from "ai";
 
 const app = express();
+const corsOptions = {
+  origin: "http://localhost:3000",
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 const port = 8080;
 
 // Initialize Firebase Admin SDK
@@ -44,28 +53,48 @@ app.post(
   verifyFirebaseAuth,
   async (req: Request, res: Response) => {
     try {
-      const { prompt } = req.body;
-      if (!prompt.trim()) {
+      const userMessages = req.body.messages as UIMessage[];
+
+      if (!userMessages || userMessages.length === 0) {
         return res.status(400).send("Bad Request: Missing prompt");
       }
 
-      // Format messages for the LLM
-      const messages = [{ role: "user", content: prompt }];
-
-      res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      });
-
       // Stream the response using our AI service
-      await handleLLMRequestStream(messages, res);
+      // await handleLLMRequestStream(messages, res);
+
+      const result = streamText({
+        model: google("gemini-2.0-flash", {
+          useSearchGrounding: true,
+        }),
+        messages: userMessages,
+        onError: (error) => {
+          console.error("Error in handleLLMRequest:", error);
+        },
+      });
+      result.toDataStreamResponse();
     } catch (error) {
       console.error("Error in /api/llm/stream:", error);
       res.status(500).send("Internal Server Error");
     }
   }
 );
+
+// token verify endpoint
+app.get("/auth/verify", async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: "Unauthorized: Missing auth token" });
+  }
+
+  try {
+    const token = authHeader.split(" ")[1];
+    await admin.auth().verifyIdToken(token);
+    return res.status(200).json({ status: "valid" });
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    return res.status(401).json({ error: "Unauthorized: Invalid auth token" });
+  }
+});
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World!");

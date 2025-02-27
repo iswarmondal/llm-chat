@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect, ChangeEvent, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import classNames from "classnames";
 
 type ExpandableTextareaProps = {
   placeholder?: string;
   value?: string;
-  onChange?: (value: string) => void;
+  onChange?: (
+    e:
+      | React.ChangeEvent<HTMLInputElement>
+      | React.ChangeEvent<HTMLTextAreaElement>
+  ) => void;
   onSubmit?: (value: string) => void;
   size?: "sm" | "md" | "lg" | "xl" | "full";
   disabled?: boolean;
@@ -51,15 +55,6 @@ const ExpandableTextarea = ({
     textarea.style.height = `${newHeight}px`;
   }, [value, minRows, maxRows]);
 
-  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    if (onChange) {
-      onChange(newValue);
-    } else {
-      setInternalValue(newValue);
-    }
-  };
-
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && onSubmit) {
       e.preventDefault();
@@ -76,7 +71,7 @@ const ExpandableTextarea = ({
     <textarea
       ref={textareaRef}
       value={value}
-      onChange={handleChange}
+      onChange={onChange}
       onKeyDown={handleKeyDown}
       disabled={disabled}
       placeholder={placeholder}

@@ -11,6 +11,10 @@ export async function handleLLMRequestStream(messages: any, res: Response) {
     onError: (error) => {
       console.error("Error in handleLLMRequest:", error);
     },
+    onFinish: () => {
+      console.log("Stream finished");
+      res.end();
+    },
   });
   result.pipeTextStreamToResponse(res);
 }
