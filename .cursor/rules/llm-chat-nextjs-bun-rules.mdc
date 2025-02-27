@@ -15,3 +15,9 @@ alwaysApply: false
 - The app is designed with a simple and minimalistic neo-brutalist design.
 - I have implemented some components like the container, heading text, button, etc. in the brutal-components folder.
 - I have also implemented some utils like the ProtectedRoute. This ensures that the user is authenticated before they can access the wrapped pages.
+
+- The backend is implemented in the `server` folder. This is a node.js (expressjs) app using Bunjs.
+- I am going to use vercel ai sdk for the LLM calls. For now we are only providing Google Gemini as a provider.
+- The server is supposed to take the user's prompt, send it to the LLM using the vercel ai sdk and stream the response to the frontend.
+- For now the server does not stores the user's messages.
+- The server endpoint are supposed to be protected by firebase auth. The user will send their firebase auth token in the request header.
