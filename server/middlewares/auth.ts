@@ -1,8 +1,13 @@
 import admin from "firebase-admin";
 import { type Request, type Response, type NextFunction } from "express";
+import type { DecodedIdToken } from "firebase-admin/auth";
+
+export interface CustomRequest extends Request {
+  decodedToken?: DecodedIdToken;
+}
 
 export function verifyFirebaseAuth(
-  req: Request,
+  req: CustomRequest,
   res: Response,
   next: NextFunction
 ) {
@@ -15,7 +20,8 @@ export function verifyFirebaseAuth(
   admin
     .auth()
     .verifyIdToken(token)
-    .then(() => {
+    .then((decodedToken) => {
+      req.decodedToken = decodedToken;
       next();
     })
     .catch((error) => {

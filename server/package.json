@@ -15,11 +15,13 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^1.1.17",
+    "@types/cors": "^2.8.17",
     "ai": "^4.1.46",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "firebase-admin": "^13.1.0",
     "i": "^0.3.7",
-    "npm": "^11.1.0"
+    "npm": "^11.1.0",
+    "stripe": "^17.7.0"
   }
 }
