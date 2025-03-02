@@ -119,7 +119,7 @@ const ChatPage = () => {
     };
     fetchUserAuthToken();
     reloadThreadsAndMessages();
-  }, []); // Add empty dependency array
+  });
 
   // Load messages when selected thread changes
   useEffect(() => {
