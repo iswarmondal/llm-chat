@@ -65,8 +65,6 @@ export async function POST(req: Request) {
       console.log("Usage stored:", updatedUsage);
     };
 
-    console.log("Incoming messages:", JSON.stringify(messages, null, 2));
-
     const result = streamText({
       model: google("gemini-2.0-flash"),
       system: "You are a helpful assistant.",

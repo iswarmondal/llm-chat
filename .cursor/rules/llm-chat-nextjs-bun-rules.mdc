@@ -17,7 +17,7 @@ alwaysApply: false
 - I have also implemented some utils like the ProtectedRoute. This ensures that the user is authenticated before they can access the wrapped pages.
 
 - The backend is implemented in the `server` folder. This is a node.js (expressjs) app using Bunjs.
-- I am going to use vercel ai sdk for the LLM calls. For now we are only providing Google Gemini as a provider.
-- The server is supposed to take the user's prompt, send it to the LLM using the vercel ai sdk and stream the response to the frontend.
-- For now the server does not stores the user's messages.
-- The server endpoint are supposed to be protected by firebase auth. The user will send their firebase auth token in the request header.
+- Currently I am moving away from a separate backend and api folder structure. That means that the `server` folder and the server present there is soon to be deprecated and will be replaced with nextjs api routes. One of the routes are already implemented for the chat endpoint.
+- I am using the vercel ai sdk for the LLM calls. For now we are only providing Google Gemini as a provider.
+- For now non of the user's messages are stored on firestore database, but they are stored in the local browser indexedDB (using dexie.js).
+- All the endpoints are supposed to be protected by firebase auth. The user will send their firebase auth token in the request header and the middleware will check if the user is authenticated before allowing them to access the endpoint.
