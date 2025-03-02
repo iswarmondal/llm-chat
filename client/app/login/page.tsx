@@ -4,7 +4,8 @@ import { Button, Container, HeadingText } from "@/app/_brutalComponents";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useSignInWithGoogle, useAuthState } from "react-firebase-hooks/auth";
-import { auth } from "@/lib/firebase/init";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase/init";
 
 export default function Page() {
   const router = useRouter();
@@ -13,15 +14,44 @@ export default function Page() {
 
   useEffect(() => {
     if (user) {
-      router.push("/profile");
+      router.push("/chat");
     }
   });
 
   const handleLogin = async () => {
     try {
       const result = await signInWithGoogle();
+      // Check if user exists in Firestore after successful authentication
+      if (result && result.user) {
+        const { uid } = result.user;
+
+        try {
+          // Check if user document already exists
+          const userDocRef = doc(db, "users", uid);
+          const userDoc = await getDoc(userDocRef);
+
+          // If user document doesn't exist, create it
+          if (!userDoc.exists()) {
+            await setDoc(userDocRef, {
+              uid,
+              email: result.user.email,
+              displayName: result.user.displayName,
+              photoURL: result.user.photoURL,
+              createdAt: new Date(),
+            });
+            console.log("New user document created in Firestore");
+          } else {
+            console.log("User document already exists in Firestore");
+          }
+        } catch (firestoreError) {
+          console.error(
+            "Error creating/checking user document:",
+            firestoreError
+          );
+        }
+      }
       if (result && result !== null) {
-        router.push("/");
+        router.push("/chat");
       }
     } catch (error) {
       console.error(error);

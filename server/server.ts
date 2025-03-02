@@ -11,20 +11,13 @@ import {
   verifyIntentSession,
 } from "./services/stripe";
 import Stripe from "stripe";
-
+import { updateUsage } from "./services/firebase/firestore";
+import { corsOptions, serviceAccount, port } from "./config";
 const app = express();
-const corsOptions = {
-  origin: "http://localhost:3000",
-  optionsSuccessStatus: 200,
-};
 
 app.use(cors(corsOptions));
-const port = 8080;
 
 // Initialize Firebase Admin SDK
-const serviceAccount = JSON.parse(
-  process.env.FIREBASE_ADMIN_SDK_CREDENTIALS || "{}"
-);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
@@ -62,14 +55,15 @@ app.post(
   verifyFirebaseAuth,
   async (req: CustomRequest, res: Response) => {
     try {
+      if (!req.decodedToken?.uid) {
+        return res.status(401).json({ error: "Unauthorized: Missing user ID" });
+      }
       const userMessages = req.body.messages as UIMessage[];
+      const threadId = req.body.threadId as string;
 
       if (!userMessages || userMessages.length === 0) {
         return res.status(400).send("Bad Request: Missing prompt");
       }
-
-      // Stream the response using our AI service
-      // await handleLLMRequestStream(messages, res);
 
       const result = streamText({
         model: google("gemini-2.0-flash", {
@@ -80,7 +74,15 @@ app.post(
           console.error("Error in handleLLMRequest:", error);
         },
       });
-      result.toDataStreamResponse();
+
+      // Get usage before returning stream
+      const usage = await result.usage;
+      await updateUsage(threadId, req.decodedToken.uid, usage);
+
+      console.log("usage", usage);
+
+      // Return stream last since it ends the response
+      return result.toDataStreamResponse();
     } catch (error) {
       console.error("Error in /api/llm/stream:", error);
       res.status(500).send("Internal Server Error");
@@ -90,6 +92,7 @@ app.post(
 
 // token verify endpoint
 app.get("/auth/verify", async (req: CustomRequest, res: Response) => {
+  console.log("auth verify");
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).json({ error: "Unauthorized: Missing auth token" });
